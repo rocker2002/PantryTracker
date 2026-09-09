@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/pantryListFragment">
+
+    <fragment
+        android:id="@+id/pantryListFragment"
+        android:name="com.example.pantrytracker.ui.list.PantryListFragment"
+        android:label="Pantry Items"
+        tools:layout="@layout/fragment_pantry_list">
+        
+        <!-- Deep link for notifications as per Section 6 -->
+        <deepLink
+            android:id="@+id/deepLinkFilter"
+            app:uri="pantrytracker://list?filter={filter}" />
+
+        <action
+            android:id="@+id/action_pantryListFragment_to_addItemFragment"
+            app:destination="@id/addItemFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/addItemFragment"
+        android:name="com.example.pantrytracker.ui.additem.AddItemFragment"
+        android:label="Add Item"
+        tools:layout="@layout/fragment_add_item" />
+
+</navigation>
