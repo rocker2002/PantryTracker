@@ -1,4 +1,4 @@
-﻿package com.example.pantrytracker.ui.viewmodel
+package com.example.pantrytracker.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -9,6 +9,7 @@ import com.example.pantrytracker.data.PantryItem
 import com.example.pantrytracker.domain.ExpiryStatus
 import com.example.pantrytracker.domain.PantryRepository
 import com.example.pantrytracker.domain.expiryStatus
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -102,6 +103,37 @@ class PantryViewModel(
     fun undoConsumed(item: PantryItem) {
         viewModelScope.launch {
             repository.setItemConsumed(item.id, false)
+        }
+    }
+
+    val allCategories: Flow<List<Category>> = repository.getAllCategories()
+    val allLocations: Flow<List<Location>> = repository.getAllLocations()
+
+    fun addItem(
+        name: String,
+        categoryId: Long,
+        locationId: Long,
+        quantity: Float,
+        unit: String,
+        purchaseDate: Long = System.currentTimeMillis(),
+        expiryDate: Long,
+        barcode: String? = null,
+        onSuccess: (() -> Unit)? = null
+    ) {
+        viewModelScope.launch {
+            val item = PantryItem(
+                name = name,
+                categoryId = categoryId,
+                locationId = locationId,
+                quantity = quantity,
+                unit = unit,
+                purchaseDate = purchaseDate,
+                expiryDate = expiryDate,
+                barcode = barcode,
+                isConsumed = false
+            )
+            repository.insertItem(item)
+            onSuccess?.invoke()
         }
     }
 

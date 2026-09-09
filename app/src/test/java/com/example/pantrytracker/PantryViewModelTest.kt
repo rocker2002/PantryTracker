@@ -108,4 +108,47 @@ class PantryViewModelTest {
         assertEquals(1, state.items.size)
         assertEquals("Milk", state.items[0].name)
     }
+
+    @Test
+    fun addItem_insertsItemSuccessfully() = runTest {
+        var insertedItem: PantryItem? = null
+        val testRepo = object : PantryRepository {
+            override fun getAllItems(): Flow<List<PantryItem>> = fakeItemsFlow
+            override fun getActiveItems(): Flow<List<PantryItem>> = fakeItemsFlow
+            override fun getItemById(id: Long): Flow<PantryItem?> = MutableStateFlow(null)
+            override suspend fun getItemByIdOnce(id: Long): PantryItem? = null
+            override suspend fun insertItem(item: PantryItem): Long {
+                insertedItem = item
+                return 1L
+            }
+            override suspend fun updateItem(item: PantryItem) {}
+            override suspend fun deleteItem(item: PantryItem) {}
+            override suspend fun setItemConsumed(id: Long, consumed: Boolean): Int = 1
+            override fun getAllCategories(): Flow<List<Category>> = fakeCategoriesFlow
+            override fun getAllLocations(): Flow<List<Location>> = fakeLocationsFlow
+            override suspend fun insertCategory(category: Category): Long = 1L
+            override suspend fun insertLocation(location: Location): Long = 1L
+        }
+
+        val viewModel = PantryViewModel(testRepo)
+        var callbackCalled = false
+        viewModel.addItem(
+            name = "Cheddar",
+            categoryId = 2L,
+            locationId = 1L,
+            quantity = 200f,
+            unit = "g",
+            expiryDate = now + (5 * oneDayMillis)
+        ) {
+            callbackCalled = true
+        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("Cheddar", insertedItem?.name)
+        assertEquals(2L, insertedItem?.categoryId)
+        assertEquals(1L, insertedItem?.locationId)
+        assertEquals(200f, insertedItem?.quantity)
+        assertEquals(true, callbackCalled)
+    }
 }
