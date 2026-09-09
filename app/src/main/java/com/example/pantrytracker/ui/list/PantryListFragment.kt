@@ -109,22 +109,13 @@ class PantryListFragment : Fragment() {
     }
 
     private fun setupSwipeToConsume() {
-        val swipeHandler = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
-            override fun onMove(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
-            ): Boolean = false
-
-            override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {
-                val position = vh.bindingAdapterPosition
-                if (position in 0 until pantryAdapter.currentList.size) {
-                    val item = pantryAdapter.currentList[position]
-                    viewModel.markConsumed(item)
-                    Snackbar.make(binding.root, "${item.name} marked used", Snackbar.LENGTH_LONG)
-                        .setAction("Undo") { viewModel.undoConsumed(item) }
-                        .show()
-                }
+        val swipeHandler = SwipeToConsumeCallback(requireContext()) { position ->
+            if (position in 0 until pantryAdapter.currentList.size) {
+                val item = pantryAdapter.currentList[position]
+                viewModel.markConsumed(item)
+                Snackbar.make(binding.root, "${item.name} marked used", Snackbar.LENGTH_LONG)
+                    .setAction("Undo") { viewModel.undoConsumed(item) }
+                    .show()
             }
         }
         ItemTouchHelper(swipeHandler).attachToRecyclerView(binding.recyclerViewItems)
