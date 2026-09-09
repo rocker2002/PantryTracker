@@ -1,4 +1,4 @@
-﻿package com.example.pantrytracker
+package com.example.pantrytracker
 
 import android.app.Application
 import android.app.NotificationChannel
@@ -16,6 +16,7 @@ class PantryApplication : Application() {
         super.onCreate()
         container = DefaultAppContainer(this)
         createNotificationChannel()
+        com.example.pantrytracker.worker.ExpiryCheckWorker.schedule(this)
     }
 
     private fun createNotificationChannel() {

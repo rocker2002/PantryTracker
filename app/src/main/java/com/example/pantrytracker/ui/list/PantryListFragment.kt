@@ -50,7 +50,17 @@ class PantryListFragment : Fragment() {
         setupFilters()
         setupSwipeToConsume()
         setupListeners()
+        handleIncomingArgs()
         observeState()
+    }
+
+    private fun handleIncomingArgs() {
+        val filterArg = arguments?.getString("filter")
+        if (filterArg == "EXPIRING") {
+            binding.chipExpiringSoon.isChecked = true
+            viewModel.setExpiryFilter(ExpiryFilter.EXPIRING_SOON)
+            viewModel.setLocationFilter(null)
+        }
     }
 
     private fun setupRecyclerView() {
