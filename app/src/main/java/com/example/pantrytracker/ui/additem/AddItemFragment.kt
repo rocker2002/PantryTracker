@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -20,10 +21,15 @@ import com.example.pantrytracker.PantryApplication
 import com.example.pantrytracker.R
 import com.example.pantrytracker.data.Category
 import com.example.pantrytracker.data.Location
+import com.example.pantrytracker.data.scanner.BarcodeLookupService
 import com.example.pantrytracker.databinding.FragmentAddItemBinding
 import com.example.pantrytracker.ui.viewmodel.PantryViewModel
 import com.example.pantrytracker.ui.viewmodel.PantryViewModelFactory
 import com.google.android.material.datepicker.MaterialDatePicker
+import com.google.android.material.snackbar.Snackbar
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -39,6 +45,8 @@ class AddItemFragment : Fragment() {
         val app = requireActivity().application as PantryApplication
         PantryViewModelFactory(app.container.repository)
     }
+
+    private val barcodeLookupService = BarcodeLookupService()
 
     private var categoriesList: List<Category> = emptyList()
     private var locationsList: List<Location> = emptyList()
@@ -65,6 +73,7 @@ class AddItemFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupToolbar()
+        setupBarcodeScanner()
         setupUnitsDropdown()
         setupExpiryPresets()
         setupDatePicker()
@@ -210,6 +219,104 @@ class AddItemFragment : Fragment() {
             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
             findNavController().popBackStack()
+        }
+    }
+
+    private fun setupBarcodeScanner() {
+        val options = GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(
+                Barcode.FORMAT_UPC_A,
+                Barcode.FORMAT_UPC_E,
+                Barcode.FORMAT_EAN_13,
+                Barcode.FORMAT_EAN_8,
+                Barcode.FORMAT_CODE_128,
+                Barcode.FORMAT_QR_CODE
+            )
+            .enableAutoZoom()
+            .build()
+
+        val scanner = GmsBarcodeScanning.getClient(requireContext(), options)
+
+        val launchScanner = {
+            scanner.startScan()
+                .addOnSuccessListener { barcode ->
+                    val raw = barcode.rawValue
+                    if (!raw.isNullOrEmpty()) {
+                        onBarcodeScanned(raw)
+                    }
+                }
+                .addOnCanceledListener {
+                    // Scan cancelled by user
+                }
+                .addOnFailureListener { e ->
+                    Snackbar.make(
+                        binding.root,
+                        "Scanner unavailable: ${e.localizedMessage}",
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                }
+        }
+
+        binding.btnScanBarcode.setOnClickListener { launchScanner() }
+        binding.tilItemName.setEndIconOnClickListener { launchScanner() }
+    }
+
+    private fun onBarcodeScanned(barcode: String) {
+        view?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+
+        binding.progressLookup.isVisible = true
+        binding.btnScanBarcode.isEnabled = false
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val result = barcodeLookupService.lookupBarcode(barcode)
+            binding.progressLookup.isVisible = false
+            binding.btnScanBarcode.isEnabled = true
+
+            result.onSuccess { product ->
+                if (product != null) {
+                    binding.etItemName.setText(product.name)
+
+                    // Auto-select category if matching
+                    product.categorySuggestion?.let { catName ->
+                        val matched = categoriesList.firstOrNull { it.name.contains(catName, ignoreCase = true) }
+                        if (matched != null) {
+                            binding.actvCategory.setText(matched.name, false)
+                        }
+                    }
+
+                    // Auto-select location if matching
+                    product.locationSuggestion?.let { locName ->
+                        val matched = locationsList.firstOrNull { it.name.contains(locName, ignoreCase = true) }
+                        if (matched != null) {
+                            binding.actvLocation.setText(matched.name, false)
+                        }
+                    }
+
+                    // Auto-fill quantity & unit
+                    product.quantity?.let { qty ->
+                        binding.etQuantity.setText(qty.toString())
+                    }
+                    product.unit?.let { u ->
+                        binding.actvUnit.setText(u, false)
+                    }
+
+                    Snackbar.make(binding.root, "Found: ${product.name}", Snackbar.LENGTH_SHORT).show()
+                } else {
+                    Snackbar.make(
+                        binding.root,
+                        "Product not found online ($barcode). Enter name manually.",
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                    binding.etItemName.requestFocus()
+                }
+            }.onFailure { err ->
+                Snackbar.make(
+                    binding.root,
+                    "Lookup failed: ${err.localizedMessage}. Enter name manually.",
+                    Snackbar.LENGTH_LONG
+                ).show()
+                binding.etItemName.requestFocus()
+            }
         }
     }
 
