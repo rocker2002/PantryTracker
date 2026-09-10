@@ -3,7 +3,7 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- App Theme Colors -->
+    <!-- App Theme Colors (Light) -->
     <color name="primary_color">#1B5E20</color>
     <color name="primary_dark">#003300</color>
     <color name="accent_color">#2E7D32</color>
@@ -24,7 +24,9 @@
     <color name="status_expired_stroke">#EF9A9A</color>
 
     <!-- Neutral Colors -->
+    <color name="background_screen">#F8F9FA</color>
     <color name="surface_card">#FFFFFF</color>
+    <color name="surface_input">#F5F5F5</color>
     <color name="text_primary">#212121</color>
     <color name="text_secondary">#757575</color>
     <color name="divider_color">#EEEEEE</color>
